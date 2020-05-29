@@ -1,0 +1,180 @@
+{
+    "description": "MS Dynamics IVR - Blog",
+    "states": [
+      {
+        "name": "Trigger",
+        "type": "trigger",
+        "transitions": [
+          {
+            "event": "incomingMessage"
+          },
+          {
+            "next": "Get_Dynamics_Token",
+            "event": "incomingCall"
+          },
+          {
+            "event": "incomingRequest"
+          }
+        ],
+        "properties": {
+          "offset": {
+            "x": -50,
+            "y": -10
+          }
+        }
+      },
+      {
+        "name": "Get_Dynamics_Token",
+        "type": "run-function",
+        "transitions": [
+          {
+            "next": "Get_Contact_Record",
+            "event": "success"
+          },
+          {
+            "event": "fail"
+          }
+        ],
+        "properties": {
+          "offset": {
+            "x": 130,
+            "y": 130
+          },
+          "url": "https://rosewood-walrus-1746.twil.io/getDynamicsToken"
+        }
+      },
+      {
+        "name": "Get_Contact_Record",
+        "type": "run-function",
+        "transitions": [
+          {
+            "next": "Greeting_By_Name",
+            "event": "success"
+          },
+          {
+            "event": "fail"
+          }
+        ],
+        "properties": {
+          "offset": {
+            "x": -240,
+            "y": 290
+          },
+          "parameters": [
+            {
+              "value": "{{contact.channel.address}}",
+              "key": "contact"
+            },
+            {
+              "value": "{{widgets.getDynamicsToken.body}}",
+              "key": "token"
+            }
+          ],
+          "url": "https://rosewood-walrus-1746.twil.io/getContactRecord"
+        }
+      },
+      {
+        "name": "Greeting_By_Name",
+        "type": "gather-input-on-call",
+        "transitions": [
+          {
+            "event": "keypress"
+          },
+          {
+            "next": "Yes_or_No",
+            "event": "speech"
+          },
+          {
+            "event": "timeout"
+          }
+        ],
+        "properties": {
+          "voice": "alice",
+          "speech_timeout": "auto",
+          "offset": {
+            "x": 140,
+            "y": 430
+          },
+          "loop": 1,
+          "finish_on_key": "#",
+          "say": "Hello {{widgets.Get_Contact_Record.parsed.first_name}}  thanks for calling Twilio. We see that you have Case Number {{widgets.Get_Contact_Record.parsed.CaseNumber}} open at the moment. Are you calling about this case?",
+          "language": "en-AU",
+          "stop_gather": true,
+          "gather_language": "en",
+          "profanity_filter": "true",
+          "timeout": 5
+        }
+      },
+      {
+        "name": "Yes_or_No",
+        "type": "split-based-on",
+        "transitions": [
+          {
+            "event": "noMatch"
+          },
+          {
+            "next": "Send_to_Flex_with_Context",
+            "event": "match",
+            "conditions": [
+              {
+                "friendly_name": "YES",
+                "arguments": [
+                  "{{widgets.Greeting_By_Name.SpeechResult}}"
+                ],
+                "type": "equal_to",
+                "value": "yes"
+              }
+            ]
+          },
+          {
+            "event": "match",
+            "conditions": [
+              {
+                "friendly_name": "NO",
+                "arguments": [
+                  "{{widgets.Greeting_By_Name.SpeechResult}}"
+                ],
+                "type": "equal_to",
+                "value": "No"
+              }
+            ]
+          }
+        ],
+        "properties": {
+          "input": "{{widgets.Greeting_By_Name.SpeechResult}}",
+          "offset": {
+            "x": -370,
+            "y": 570
+          }
+        }
+      },
+      {
+        "name": "Send_to_Flex_with_Context",
+        "type": "send-to-flex",
+        "transitions": [
+          {
+            "event": "callComplete"
+          },
+          {
+            "event": "failedToEnqueue"
+          },
+          {
+            "event": "callFailure"
+          }
+        ],
+        "properties": {
+          "offset": {
+            "x": 170,
+            "y": 690
+          },
+          "workflow": "WW6ed7ef7f60e8e4772bea0ee5e6ded386",
+          "channel": "TC6dde41f503c8315b97386f464db9b1b9",
+          "attributes": "{\"name\": \"{{widgets.Get_Contact_Record.parsed.first_name}} {{widgets.Get_Contact_Record.parsed.last_name}}\",\n\t\"identity\": \"{{contact.channel.address}}\",\n\t\"firstName\": \"{{widgets.Get_Contact_Record.parsed.first_name}}\",\n\t\"lastName\": \"{{widgets.Get_Contact_Record.parsed.last_name}}\",\n\t\"caseNumber\": \"{{widgets.Get_Contact_Record.parsed.CaseNumber}}\",\n\t\"incidentID\":\"{{widgets.Get_Contact_Record.parsed.incidentid}}\"\n}"
+        }
+      }
+    ],
+    "initial_state": "Trigger",
+    "flags": {
+      "allow_concurrent_calls": true
+    }
+  }
